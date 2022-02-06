@@ -2,21 +2,22 @@ import requests
 from bs4 import BeautifulSoup
 from lxml import etree
 import pandas as pd
-from openpyxl import load_workbook
-from openpyxl import Workbook
-from openpyxl.drawing.image import Image
-import os
+
+
 #from PIL import Image
 
-print('Escribe lo que deseas buscar')
+#uncomment next lines in production
+""" print('Escribe lo que deseas buscar')
 searchTerm = input('> ')
 print(f'Buscando: {searchTerm}')
-searchTerm = searchTerm.replace(' ','-')
+searchTerm = searchTerm.replace(' ','-') """
 
 base_url = 'https://listado.mercadolibre.com.mx/'
 new_items_filter = "_ITEM*CONDITION_2230284_NoIndex_True#applied_filter_id%3DITEM_CONDITION%26applied_filter_name%3DCondición%26applied_filter_order%3D9%26applied_value_id%3D2230284%26applied_value_name%3DNuevo%26applied_value_order%3D1%26applied_value_results%3D78%26is_custom%3Dfalse"
 
-r = requests.get(f'{base_url}+{searchTerm}+{new_items_filter}')
+#uncomment next line in production
+#r = requests.get(f'{base_url}+{searchTerm}+{new_items_filter}')
+r = requests.get('https://listado.mercadolibre.com.mx/here-i-stand')
 #Status code must be 200
 print('status:', r.status_code)
 soup = BeautifulSoup(r.content, 'html.parser')
@@ -51,60 +52,69 @@ print('image url´s:', len(images_url))
 #print(images_url[0].attrib)
 #print(images_url[0].attrib['data-src'])
 
-#Create a dataset and extract it to csv
+#Create a dataset and extract it to excel
 df = pd.DataFrame({"titulos":titles, "img": images_url, "url":urls, "precios": prices} )
 df = df.set_index('titulos')
 
 with pd.ExcelWriter('DataFrame.xlsx') as writer:
     df.to_excel(writer, sheet_name='database')
 
-wb = load_workbook('DataFrame.xlsx')
-ws = wb['database']
-
-def download_img(url,file_name):
-    res = requests.get(url)
-    img = open(file_name, 'wb')
-    img.write(res.content)
-    img.close()
-
-def insert_img(file_name,cell):
-    img = Image(file_name)
-    img.width,img.height=72,72
-    ws.add_image(img, cell)
-
-def remove_img(img_name):
-    try:
-        os.remove(img_name)
-    except:
-        print('file not found: ', img_name)
-# check if file exists or not
-    #if os.path.exists(img_name) is False:
-        # file did not exists
-        #return True
-
-for i in range(2,len(images_url)+2):
-    name = ws['B'+str(i)].value.split('/')[3].split('.')[0]
-    print('name:',name)
-    url = ws['B'+str(i)].value
-    print('url:', url)
-    download_img(url,name)
-    ws['B'+str(i)]=""
-    ws.row_dimensions[i].height=80
-    insert_img(name,'B'+str(i))
-
-""" worksheet = wb.getWorksheets().get(0)
-cells = worksheet.getCells()
-cells.setColumnWidth(1, 40)
-cells.setColumnWidth(2, 80)
-cells.setColumnWidth(1, 80)
-cells.setColumnWidth(1, 80) """
-#os.remove(file) for filename in os.listdir('/') if file.startswith('D_NQ_NP')
-wb.save('output.xlsx') 
-
-wb = load_workbook('DataFrame.xlsx')
-ws = wb['database']
+next_page = dom.xpath("//div[@class='ui-search-pagination']/ul/li[contains(@class,'--next')]/a")[0].get('href')
 
 
-for i in range(2,len(images_url)+2):
-    name = ws['B'+str(i)].value.split('/')[3].split('.')[0]
-    remove_img(name)
+first = int(soup.find('span', attrs={'class':'andes-pagination__link'}).text)
+last = int(soup.find('li', attrs={'class':'andes-pagination__page-count'}).text.replace('de ',''))
+
+""" r = requests.get(next_page)
+if r.status_code == 200 :
+    soup = BeautifulSoup(r.content, 'html.parser')
+    first = int(soup.find('span', attrs={'class':'andes-pagination__link'}).text)
+    print(first)
+    next_page = dom.xpath("//div[@class='ui-search-pagination']/ul/li[contains(@class,'--next')]/a")[0].get('href')
+    print(next_page)
+ """
+title_list = []
+url_list = []
+prices_list = []
+images_url_list = []
+
+next_page = 'https://listado.mercadolibre.com.mx/here-i-stand'
+while True:
+    r = requests.get(next_page)
+    if r.status_code == 200 :
+        soup = BeautifulSoup(r.content, 'html.parser')
+        dom  = etree.HTML(str(soup))
+        #titles
+        titles = soup.find_all('h2', attrs={'class': 'ui-search-item__title'})
+        titles = [i.text for i in titles]
+        title_list.extend(titles)
+        #urls
+        urls = dom.xpath("//li[@class='ui-search-layout__item']//div[@class='ui-search-result__image']//a[@class='ui-search-link']")
+        urls = [i.attrib['href'] for i in urls]
+        url_list.extend(urls)
+        #prices
+        prices = dom.xpath("//li[@class='ui-search-layout__item']//div[@class='ui-search-result__content-wrapper']//div[@class='ui-search-item__group__element ui-search-price__part-without-link']//div[@class='ui-search-price__second-line']//span[@class='price-tag-fraction']")
+        prices = [int(i.text.replace(',','')) for i in prices]
+        prices_list.extend(prices)
+        #images_url
+        images_url = dom.xpath("//li[@class='ui-search-layout__item']//div[@class='ui-search-result__image']//div[@class='slick-track']//img[1]")
+        images_url = [i.attrib['data-src'] for i in images_url]
+        images_url_list.extend(images_url)
+        first = int(soup.find('span', attrs={'class':'andes-pagination__link'}).text)
+        last = int(soup.find('li', attrs={'class':'andes-pagination__page-count'}).text.replace('de ',''))
+
+    else:
+        break
+    print('Escaneando página:',first, ' de ', last)
+
+    if first == last:
+        break
+    next_page = dom.xpath("//div[@class='ui-search-pagination']/ul/li[contains(@class,'--next')]/a")[0].get('href')
+
+
+
+df = pd.DataFrame({"titulo":title_list, "img": images_url_list, "url":url_list, "precios": prices_list} )
+df = df.set_index('titulo')
+
+with pd.ExcelWriter('DataFrame.xlsx') as writer:
+    df.to_excel(writer, sheet_name='database')
