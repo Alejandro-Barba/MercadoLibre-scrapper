@@ -73,24 +73,24 @@ def insert_img(file_name,cell):
     ws.add_image(img, cell)
 
 def remove_img(img_name):
+    try:
+        os.remove(img_name)
+    except:
+        print('file not found: ', img_name)
 # check if file exists or not
-    if os.path.exists(img_name) is False:
+    #if os.path.exists(img_name) is False:
         # file did not exists
-        return True
-    else:
-        os.remove( img_name)
-        
+        #return True
 
-for i in range(2,len(images_url)-2):
-    name = str(i)#ws['B'+str(i)].value.split('/')[3].split('.')[0]
+for i in range(2,len(images_url)+2):
+    name = ws['B'+str(i)].value.split('/')[3].split('.')[0]
+    print('name:',name)
     url = ws['B'+str(i)].value
-    print('extrayendo', i-1, " de ", len(images_url)-2)
+    print('url:', url)
     download_img(url,name)
     ws['B'+str(i)]=""
     ws.row_dimensions[i].height=80
-    ws.row_dimensions[i].width=80
     insert_img(name,'B'+str(i))
-    remove_img(name)
 
 """ worksheet = wb.getWorksheets().get(0)
 cells = worksheet.getCells()
@@ -100,3 +100,11 @@ cells.setColumnWidth(1, 80)
 cells.setColumnWidth(1, 80) """
 #os.remove(file) for filename in os.listdir('/') if file.startswith('D_NQ_NP')
 wb.save('output.xlsx') 
+
+wb = load_workbook('DataFrame.xlsx')
+ws = wb['database']
+
+
+for i in range(2,len(images_url)+2):
+    name = ws['B'+str(i)].value.split('/')[3].split('.')[0]
+    remove_img(name)
