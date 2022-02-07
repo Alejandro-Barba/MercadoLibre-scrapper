@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from lxml import etree
 import pandas as pd
-
+from scrapper import deppScrapper
 
 #from PIL import Image
 
@@ -78,7 +78,7 @@ url_list = []
 prices_list = []
 images_url_list = []
 
-next_page = 'https://listado.mercadolibre.com.mx/here-i-stand'
+next_page = 'https://listado.mercadolibre.com.mx/here-i-stand_ITEM*CONDITION_2230284_NoIndex_True#applied_filter_id%3DITEM_CONDITION%26applied_filter_name%3DCondici%C3%B3n%26applied_filter_order%3D11%26applied_value_id%3D2230284%26applied_value_name%3DNuevo%26applied_value_order%3D1%26applied_value_results%3D77%26is_custom%3Dfalse'
 while True:
     r = requests.get(next_page)
     if r.status_code == 200 :
@@ -119,3 +119,5 @@ df = df.set_index('titulo')
 with pd.ExcelWriter('DataFrame.xlsx') as writer:
     df.to_excel(writer, sheet_name='database')
     print('Archivo guardado')
+
+print(deppScrapper(url_list))
