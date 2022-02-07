@@ -1,9 +1,10 @@
+from turtle import title
 import requests
 from bs4 import BeautifulSoup
 from lxml import etree
 import pandas as pd
 from scrapper import deppScrapper
-
+from excelSaver import imageAdder
 #from PIL import Image
 
 #uncomment next lines in production
@@ -118,6 +119,22 @@ df = df.set_index('titulo')
 
 with pd.ExcelWriter('DataFrame.xlsx') as writer:
     df.to_excel(writer, sheet_name='database')
-    print('Archivo guardado')
+    print('Archivo inicial guardado')
 
-print(deppScrapper(url_list))
+#print(deppScrapper(url_list))
+def deepScraping(url_list,limit):
+    #initialize the deep scrapper for the urls and the limit establiches by the user
+    url_list_limited = url_list[:limit-1]
+    title_list ,image_url_list , image_qty_list , sales_list , pdp_url_list , stars_list , reviews_list , not_discount_price_list , discount_price_list , brand_list , sku_list , char3_list , char4_list , char5_list , char6_list , char7_list , questions_list , seller_list , seller_status_list , seller_sales_60_days_list = deppScrapper(url_list_limited)
+    df2 = pd.DataFrame({"Titulo" : title_list, "Imagen" : image_url_list, "Vendidos" : sales_list, "URL" : pdp_url_list, "Estrellas" : stars_list, "Reseñas" : reviews_list, "Precio inicial" : not_discount_price_list, "Precio con descuento" : discount_price_list, "Marca" : brand_list, "SKU" : sku_list, "Característica 1" : char3_list,  "Característica 2" : char4_list,  "Característica 3" : char5_list,  "Característica 4" : char6_list,  "Característica 5" : char7_list, "Cantidad de preguntas" : questions_list , "Vendedor" : seller_list , "Estatus del vendedor" : seller_status_list , "Ventas del vendedor en ultimos 60 días" : seller_sales_60_days_list })
+    df2 = df2.set_index('Titulo')
+    with pd.ExcelWriter('DeepScrapping.xlsx') as writer:
+        df2.to_excel(writer, sheet_name='database')
+        print('Archivo completo guardado')
+#deepScraping(url_list, 10)
+
+def excelFormater(title_list):
+    print('Iniciando formato de archivo')
+    imageAdder(len(title_list)+2)
+
+excelFormater(title_list)
